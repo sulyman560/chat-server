@@ -36,10 +36,11 @@ io.on("connection", (socket) => {
   socket.on("addUser", async (userId) => {
     socket.userId = userId;
 
-    // list এ add করো
-    if (!onlineUsers.some(u => u.userId === userId)) {
-      onlineUsers.push({ userId, socketId: socket.id });
+    if (!onlineUsers[userId]) {
+      onlineUsers[userId] = [];
     }
+
+    onlineUsers[userId].push(socket.id);
 
     await User.findByIdAndUpdate(userId, {
       online: true,
@@ -60,22 +61,52 @@ io.on("connection", (socket) => {
 
   // 🔥 USER OFFLINE
   socket.on("disconnect", async () => {
-    onlineUsers = onlineUsers.filter(u => u.socketId !== socket.id);
+    if (socket.userId && onlineUsers[socket.userId]) {
+      // remove this socket
+      onlineUsers[socket.userId] = onlineUsers[socket.userId].filter(
+        (id) => id !== socket.id
+      );
 
-    if (socket.userId) {
-      await User.findByIdAndUpdate(socket.userId, {
-        online: false,
-        lastSeen: new Date(),
-      });
+      // যদি আর কোনো socket না থাকে, তখন offline করো
+      if (onlineUsers[socket.userId].length === 0) {
+        delete onlineUsers[socket.userId];
 
-      io.emit("updateUserStatus", {
-        userId: socket.userId,
-        online: false,
-        lastSeen: new Date(),
-      });
+        await User.findByIdAndUpdate(socket.userId, {
+          online: false,
+          lastSeen: new Date(),
+        });
+
+        io.emit("updateUserStatus", {
+          userId: socket.userId,
+          online: false,
+          lastSeen: new Date(),
+        });
+      }
     }
 
     console.log("Disconnected:", socket.id);
+  });
+});
+
+const sendAllUsersStatus = async () => {
+  const allUsers = await User.find({}, "_id online lastSeen");
+  io.emit("allUsersStatus", allUsers);
+};
+
+io.on("connection", (socket) => {
+  console.log("Socket Connected:", socket.id);
+
+  socket.on("addUser", async (userId) => {
+    socket.userId = userId;
+    await User.findByIdAndUpdate(userId, { online: true, lastSeen: null });
+    sendAllUsersStatus(); // 🔹 emit full status
+  });
+
+  socket.on("disconnect", async () => {
+    if (socket.userId) {
+      await User.findByIdAndUpdate(socket.userId, { online: false, lastSeen: new Date() });
+      sendAllUsersStatus(); // 🔹 emit full status
+    }
   });
 });
 
