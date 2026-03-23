@@ -24,8 +24,8 @@ app.get("/", (req, res) => res.send("Server running"));
 // http server + socket
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: "https://chatapp-steel-one.vercel.app", methods: ["GET", "POST"] },
-  path: "/socket.io", // online server এ sometimes custom path দরকার
+  cors: { origin: "*", methods: ["GET", "POST"] },
+  //path: "/socket.io", // online server এ sometimes custom path দরকার
 });
 
 let onlineUsers = [];
@@ -112,4 +112,4 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Server run on port http://localhost:${PORT}`));
