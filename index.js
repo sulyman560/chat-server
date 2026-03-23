@@ -24,7 +24,8 @@ app.get("/", (req, res) => res.send("Server running"));
 // http server + socket
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: "*", methods: ["GET", "POST"] },
+  cors: { origin: "https://chatapp-steel-one.vercel.app", methods: ["GET", "POST"] },
+  path: "/socket.io", // online server এ sometimes custom path দরকার
 });
 
 let onlineUsers = [];
